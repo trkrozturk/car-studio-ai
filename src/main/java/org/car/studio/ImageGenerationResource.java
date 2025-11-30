@@ -43,10 +43,10 @@ public class ImageGenerationResource {
             @RestForm("isPlateVisible") boolean isPlateVisible,
             @RestForm("plateImageUrl") FileUpload plateImageUrl,
             @RestForm("plateColor") String plateColor,
-            @RestForm("aiVersion") String aiVersion
+            @RestForm("version") String version
     ) throws IOException {
         PlateConfiguration plateConfig = new PlateConfiguration(isPlateVisible, plateImageUrl, plateColor);
-        return imageGenerationService.generateImage(images, plateConfig, aiVersion);
+        return imageGenerationService.generateImage(images, plateConfig, version);
     }
 }
 

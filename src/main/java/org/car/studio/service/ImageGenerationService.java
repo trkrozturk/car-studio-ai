@@ -43,24 +43,24 @@ public class ImageGenerationService {
      *
      * @param images uploaded car images
      * @param plateConfig license plate configuration
-     * @param aiVersion AI version to use (v1 or v2)
+     * @param version AI version to use (v1 or v2)
      * @return AI-generated image response
      * @throws IOException if file processing fails
      */
-    public FalResponse generateImage(List<FileUpload> images, PlateConfiguration plateConfig, String aiVersion) throws IOException {
-        logRequestDetails(plateConfig, aiVersion);
+    public FalResponse generateImage(List<FileUpload> images, PlateConfiguration plateConfig, String version) throws IOException {
+        logRequestDetails(plateConfig, version);
 
         String prompt = promptBuilderService.buildPrompt(plateConfig);
         List<String> imageUrls = imagePreparationService.prepareImageUrls(images, plateConfig);
 
         FalRequest request = buildFalRequest(prompt, imageUrls);
 
-        return callFalApi(request, aiVersion);
+        return callFalApi(request, version);
     }
 
-    private void logRequestDetails(PlateConfiguration plateConfig, String aiVersion) {
+    private void logRequestDetails(PlateConfiguration plateConfig, String version) {
         LOGGER.info("Starting image generation with configuration:");
-        LOGGER.info("  - AI Version: {}", aiVersion);
+        LOGGER.info("  - AI Version: {}", version);
         LOGGER.info("  - Plate visible: {}", plateConfig.isPlateVisible());
         LOGGER.info("  - Plate color: {}", plateConfig.plateColor());
         LOGGER.info("  - Has plate image: {}", plateConfig.hasPlateImage());
@@ -73,16 +73,16 @@ public class ImageGenerationService {
         return request;
     }
 
-    private FalResponse callFalApi(FalRequest request, String aiVersion) {
+    private FalResponse callFalApi(FalRequest request, String version) {
         try {
-            LOGGER.info("Calling Fal.ai API for image generation with version: {}", aiVersion);
+            LOGGER.info("Calling Fal.ai API for image generation with version: {}", version);
 
-            if ("v2".equalsIgnoreCase(aiVersion)) {
+            if ("v2".equalsIgnoreCase(version)) {
                 return falClientV2.edit(request);
             }
 
-            if (aiVersion != null && !"v1".equalsIgnoreCase(aiVersion)) {
-                LOGGER.warn("Unknown AI version '{}', defaulting to v1", aiVersion);
+            if (version != null && !"v1".equalsIgnoreCase(version)) {
+                LOGGER.warn("Unknown AI version '{}', defaulting to v1", version);
             }
 
             return falClientV1.edit(request);
