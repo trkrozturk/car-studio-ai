@@ -2,7 +2,8 @@ package org.car.studio.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.car.studio.fal.FalClient;
+import org.car.studio.fal.FalClientV1;
+import org.car.studio.fal.FalClientV2;
 import org.car.studio.fal.FalRequest;
 import org.car.studio.fal.FalResponse;
 import org.car.studio.model.PlateConfiguration;
@@ -25,7 +26,11 @@ public class ImageGenerationService {
 
     @Inject
     @RestClient
-    FalClient falClient;
+    FalClientV1 falClientV1;
+
+    @Inject
+    @RestClient
+    FalClientV2 falClientV2;
 
     @Inject
     PromptBuilderService promptBuilderService;
@@ -38,22 +43,24 @@ public class ImageGenerationService {
      *
      * @param images uploaded car images
      * @param plateConfig license plate configuration
+     * @param aiVersion AI version to use (v1 or v2)
      * @return AI-generated image response
      * @throws IOException if file processing fails
      */
-    public FalResponse generateImage(List<FileUpload> images, PlateConfiguration plateConfig) throws IOException {
-        logRequestDetails(plateConfig);
+    public FalResponse generateImage(List<FileUpload> images, PlateConfiguration plateConfig, String aiVersion) throws IOException {
+        logRequestDetails(plateConfig, aiVersion);
 
         String prompt = promptBuilderService.buildPrompt(plateConfig);
         List<String> imageUrls = imagePreparationService.prepareImageUrls(images, plateConfig);
 
         FalRequest request = buildFalRequest(prompt, imageUrls);
 
-        return callFalApi(request);
+        return callFalApi(request, aiVersion);
     }
 
-    private void logRequestDetails(PlateConfiguration plateConfig) {
+    private void logRequestDetails(PlateConfiguration plateConfig, String aiVersion) {
         LOGGER.info("Starting image generation with configuration:");
+        LOGGER.info("  - AI Version: {}", aiVersion);
         LOGGER.info("  - Plate visible: {}", plateConfig.isPlateVisible());
         LOGGER.info("  - Plate color: {}", plateConfig.plateColor());
         LOGGER.info("  - Has plate image: {}", plateConfig.hasPlateImage());
@@ -66,10 +73,19 @@ public class ImageGenerationService {
         return request;
     }
 
-    private FalResponse callFalApi(FalRequest request) {
+    private FalResponse callFalApi(FalRequest request, String aiVersion) {
         try {
-            LOGGER.info("Calling Fal.ai API for image generation");
-            return falClient.edit(request);
+            LOGGER.info("Calling Fal.ai API for image generation with version: {}", aiVersion);
+
+            if ("v2".equalsIgnoreCase(aiVersion)) {
+                return falClientV2.edit(request);
+            }
+
+            if (aiVersion != null && !"v1".equalsIgnoreCase(aiVersion)) {
+                LOGGER.warn("Unknown AI version '{}', defaulting to v1", aiVersion);
+            }
+
+            return falClientV1.edit(request);
         } catch (ClientWebApplicationException e) {
             String errorBody = e.getResponse().readEntity(String.class);
             LOGGER.error("Fal.ai API Error: {}", errorBody);
